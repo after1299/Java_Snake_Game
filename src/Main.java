@@ -1,8 +1,16 @@
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import javax.swing.*;
+
+import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -20,10 +28,29 @@ public class Main extends JPanel implements KeyListener{
 	private int speed = 100;
 	private static String direction;
 	private boolean allowKeyPress;
+	private int score;
+	private int highest_score;
+	String desktop = System.getProperty("user.home") + "/Desktop/";
+	String myFile = desktop + "filename.txt";
 	
 	public Main() {
-		snake = new Snake();
-		fruit = new Fruit();
+		read_highest_score();
+		// Done by reset()
+//		snake = new Snake();
+//		fruit = new Fruit();
+//		t = new Timer();
+//		t.scheduleAtFixedRate(new TimerTask() {
+//			@Override
+//			public void run() {
+//				repaint();
+//			}
+//		}, 0, speed);
+//		direction = "Right";
+		reset();
+		addKeyListener(this);
+	}
+	
+	private void setTimer() {
 		t = new Timer();
 		t.scheduleAtFixedRate(new TimerTask() {
 			@Override
@@ -31,13 +58,48 @@ public class Main extends JPanel implements KeyListener{
 				repaint();
 			}
 		}, 0, speed);
-		direction = "Right";
-		addKeyListener(this	);
+	}
+	
+	private void reset() {
+		score = 0;
+		if (snake != null) {
+			snake.getSnakeBody().clear();
+		}
 		allowKeyPress = true;
+		direction = "Right";
+		snake = new Snake();
+		fruit = new Fruit();
+		setTimer();
 	}
 	
 	@Override
 	public void paintComponent(Graphics g) {
+		// check if the snake bits itself
+		ArrayList<Node> snake_body = snake.getSnakeBody();
+		Node head = snake_body.get(0);
+		for (int i = 1; i < snake_body.size(); i++) {
+			if (snake_body.get(i).x == head.x && snake_body.get(i).y == head.y) {
+				allowKeyPress = false;
+				t.cancel();
+				t.purge();
+				int response = JOptionPane.showOptionDialog(this, "Game Over!! Your score is " + score + ". Would you like to start over?",
+															"Game Over", JOptionPane.YES_NO_OPTION, 
+															JOptionPane.INFORMATION_MESSAGE, null, null, JOptionPane.YES_OPTION);
+				write_a_file(score);
+				switch (response) {
+				case JOptionPane.CLOSED_OPTION : 
+					System.exit(0);
+					break;
+				case JOptionPane.NO_OPTION : 
+					System.exit(0);
+					break;
+				case JOptionPane.YES_OPTION :
+					reset();
+					return;
+				}
+			}
+		}
+		
 		// System.out.println("We are calling paint component...");
 		// draw a black background
 		g.fillRect(0, 0, width, height);
@@ -65,6 +127,7 @@ public class Main extends JPanel implements KeyListener{
 			// 2. draw fruit
 			fruit.drawFruit(g);
 			// 3. score++
+			score++;
 		} else {
 			// if the snake does not eat food before the picture been repaint
 			// remove the tail (which node in getSnackBody's index is : snake.getSnakeBody().size() - 1)
@@ -121,5 +184,43 @@ public class Main extends JPanel implements KeyListener{
 	public void keyReleased(KeyEvent e) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	public void read_highest_score() {
+		try {
+			File myObj = new File(myFile);
+			Scanner myReader = new Scanner(myObj);
+			highest_score = myReader.nextInt();
+			myReader.close();
+		} catch (FileNotFoundException e) {
+			highest_score = 0;
+			try {
+				File myObj = new File(myFile);
+				if (myObj.createNewFile()) {
+					System.out.println("File created: " + myObj.getName());
+				}
+				FileWriter myWriter = new FileWriter(myObj.getName());
+				myWriter.write("" + 0);
+				myWriter.close();
+			} catch (IOException err) {
+				System.out.println("An error occurred");
+				err.printStackTrace();
+			}
+		}
+	}
+	
+	public void write_a_file(int score) {
+		try {
+			FileWriter myWriter = new FileWriter(myFile);
+			if (score > highest_score) {
+				myWriter.write("" + score);
+				highest_score = score;
+			} else {
+				myWriter.write("" + highest_score);
+			}
+			myWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
